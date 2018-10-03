@@ -4,6 +4,7 @@ luarocks {
 
     group 'production' {
         module {'lua-resty-iputils', '0.3.0'},
+        module {'lyaml'},
     },
 
     group 'testing' {
