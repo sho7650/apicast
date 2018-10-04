@@ -33,6 +33,13 @@ function _M.new(config)
   return self
 end
 
+-- forward all policy request methods to the policy chain
+for _,phase in Policy.request_phases() do
+  _M[phase] = function(self, context, ...)
+    return context[self][phase](context[self], context, ...)
+  end
+end
+
 local function build_objects(constructor, list)
   if not list then return nil end
 
@@ -187,6 +194,16 @@ do
   end
 end
 
+local default = {
+  services = build_objects(Service.new, {
+    { name = 'not_found',
+      policy_chain = {
+        { policy = 'apicast.policy.echo', configuration = { status = ngx.HTTP_NOT_FOUND } },
+      },
+    },
+  }),
+}
+
 local function init_configuration(self, context)
   local url = self.url
 
@@ -198,7 +215,7 @@ local function init_configuration(self, context)
 
   if configuration then
     self.routes = build_routes(configuration)
-    self.services = build_services(configuration)
+    self.services = setmetatable(build_services(configuration), { __index = default.services })
     self.upstreams = build_upstreams(configuration)
   else
     ngx.log(ngx.WARN, 'failed to load ', url, ' err: ', err)
@@ -212,28 +229,33 @@ function _M:init(context)
   end
 end
 
-
 local function find_route(routes, context)
   for i=1, #routes do
     if routes[i]:match(context) then return routes[i] end
   end
 end
 
+local empty_chain = PolicyChain.new()
+
 function _M:dispatch(route)
   local destination = route and route.destination
+  local service = self.services[destination and destination.service]
 
-  if destination then
-
+  if service then
+    return service.policy_chain or empty_chain
   else
-    ngx.log(ngx.ERR, 'could not find destination')
+    ngx.log(ngx.ERR, 'could not find the route destination')
   end
-
 end
+
+local rewrite = _M.rewrite
 
 function _M:rewrite(context)
   local route = find_route(self.routes, context)
 
-  return self:dispatch(route)
+  context[self] = self:dispatch(route)
+
+  return rewrite(self, context)
 end
 
 return _M
