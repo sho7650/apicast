@@ -151,8 +151,8 @@ end
 
 --- Initialize new environment.
 -- @treturn Environment
-function _M.new()
-    return setmetatable({ _context = linked_list.readonly(_M.default_config), loaded = {} }, mt)
+function _M.new(context)
+    return setmetatable({ _context = linked_list.readonly(_M.default_config, context), loaded = {} }, mt)
 end
 
 local function expand_environment_name(name)

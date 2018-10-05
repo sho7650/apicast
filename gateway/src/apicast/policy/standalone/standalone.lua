@@ -9,6 +9,7 @@ local _M = Policy.new('standalone')
 local tab_new = require('resty.core.base').new_tab
 local insert = table.insert
 local pairs = pairs
+local assert = assert
 
 local setmetatable = setmetatable
 
@@ -33,10 +34,15 @@ function _M.new(config)
   return self
 end
 
+
+local empty_chain = PolicyChain.new()
+
 -- forward all policy request methods to the policy chain
 for _,phase in Policy.request_phases() do
   _M[phase] = function(self, context, ...)
-    return context[self][phase](context[self], context, ...)
+    if context[self] then
+      return context[self][phase](context[self], context, ...)
+    end
   end
 end
 
@@ -50,9 +56,9 @@ local function build_objects(constructor, list)
 
     if object.name then
       objects[object.name] = object
-    else
-      objects[i] = object
     end
+
+    objects[i] = object
   end
 
   return objects
@@ -84,7 +90,9 @@ do
   local Condition_mt = { __index = Condition }
 
   local operations = {
-    server_port = function(self) return ngx.var.server_port == self.value end,
+    server_port = function(self) return
+      ngx.var.server_name == self.value or ngx.var.server_port == self.value
+    end,
     always = function(self) return self.value end,
     unknown = function(self) ngx.log(ngx.ERR, 'unknown condition ', self.name); return end
   }
@@ -204,7 +212,7 @@ local default = {
   }),
 }
 
-local function init_configuration(self, context)
+function _M:load_configuration()
   local url = self.url
 
   if not url then
@@ -217,15 +225,18 @@ local function init_configuration(self, context)
     self.routes = build_routes(configuration)
     self.services = setmetatable(build_services(configuration), { __index = default.services })
     self.upstreams = build_upstreams(configuration)
+
+    ngx.log(ngx.NOTICE, 'loaded standalone configuration from : ', url)
+    return configuration
   else
     ngx.log(ngx.WARN, 'failed to load ', url, ' err: ', err)
     return nil, err
   end
 end
 
-function _M:init(context)
+function _M:init()
   if self then -- initializing policy instance
-    return init_configuration(self)
+    return self:load_configuration(self)
   end
 end
 
@@ -235,8 +246,6 @@ local function find_route(routes, context)
   end
 end
 
-local empty_chain = PolicyChain.new()
-
 function _M:dispatch(route)
   local destination = route and route.destination
   local service = self.services[destination and destination.service]
@@ -245,6 +254,7 @@ function _M:dispatch(route)
     return service.policy_chain or empty_chain
   else
     ngx.log(ngx.ERR, 'could not find the route destination')
+    return assert(self.services.not_found, 'missing service: not_found').policy_chain
   end
 end
 
@@ -253,7 +263,7 @@ local rewrite = _M.rewrite
 function _M:rewrite(context)
   local route = find_route(self.routes, context)
 
-  context[self] = self:dispatch(route)
+  context[self] = assert(self:dispatch(route), 'missing policy chain')
 
   return rewrite(self, context)
 end

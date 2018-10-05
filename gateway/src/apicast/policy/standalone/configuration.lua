@@ -1,6 +1,7 @@
 local resty_url = require('resty.url')
 
 local setmetatable = setmetatable
+local format = string.format
 
 local _M = {
 
@@ -12,8 +13,18 @@ local allowed_schemes = {
     -- TODO: support Data URI
 }
 
-function _M.new(uri)
+local function to_url(uri)
     local url, err = resty_url.parse(uri)
+
+    if url then
+        return url
+    else
+        return resty_url.parse(format('file:%s', uri))
+    end
+end
+
+function _M.new(uri)
+    local url, err = to_url(uri)
 
     if not url then return nil, err end
 
