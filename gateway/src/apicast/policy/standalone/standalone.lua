@@ -10,6 +10,8 @@ local tab_new = require('resty.core.base').new_tab
 local insert = table.insert
 local pairs = pairs
 local assert = assert
+local format = string.format
+local concat = table.concat
 
 local setmetatable = setmetatable
 
@@ -93,6 +95,8 @@ do
     server_port = function(self) return
       ngx.var.server_name == self.value or ngx.var.server_port == self.value
     end,
+    uri_path = function(self) return ngx.var.uri == self.value end,
+    http_method = function(self) return ngx.req.get_method() == self.value end,
     always = function(self) return self.value end,
     unknown = function(self) ngx.log(ngx.ERR, 'unknown condition ', self.name); return end
   }
@@ -106,7 +110,16 @@ do
   end
 
   function Condition:match(context)
-    return self.fun(self)
+    if self.fun(self) then
+      ngx.log(ngx.DEBUG, 'condition ', self.name, ' == ', self.value, ' : ', true)
+      return true
+    else
+      ngx.log(ngx.DEBUG, 'condition ', self.name, ' == ', self.value, ' : ', false)
+      return false
+    end
+
+
+    return
   end
 end
 
@@ -131,21 +144,43 @@ do
       end
     end
   end
+
+  function Match:all(context)
+    for i=1, #self do
+      if not self[i]:match(context) then
+        return false
+      end
+    end
+
+    return true
+  end
 end
 
 do
-  local Route_mt = { __index = Route }
+  local Route_mt = {
+    __index = Route,
+    __tostring = function(route)
+      local match = tab_new(#route.conditions, 0)
+
+      for i=1, #route.conditions do
+        match[i] = format("%s = %s", route.conditions[i].name, route.conditions[i].value)
+      end
+
+      return format('%s', concat(match, ' and '))
+    end
+  }
 
   function Route.new(config)
     return setmetatable({
+      name = config.name,
       conditions = Match.new(config.match),
-      destination = Destination.new(config.destination),
+      destination = Destination.new(assert(config.destination, 'route is missing destination')),
       routes = build_routes(config),
     }, Route_mt)
   end
 
   function Route:match(context)
-    return self.conditions:any(context)
+    return self.conditions:all(context)
   end
 end
 
@@ -240,9 +275,23 @@ function _M:init()
   end
 end
 
-local function find_route(routes, context)
+local find_route, match_route
+match_route = function (route, context)
+  ngx.log(ngx.DEBUG, 'testing route: ', route)
+  if route:match(context) then
+    ngx.log(ngx.DEBUG, 'route matched: ', route)
+    if route.routes then
+      return find_route(route.routes) or route
+    else
+      return route
+    end
+  end
+end
+
+find_route = function (routes, context)
   for i=1, #routes do
-    if routes[i]:match(context) then return routes[i] end
+    local route = match_route(routes[i], context)
+    if route then return route end
   end
 end
 
