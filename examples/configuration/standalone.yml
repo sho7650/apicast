@@ -25,6 +25,16 @@ server:
     # name: default # several listen could have the same name
     protocol: http2 # | spdy | http
     tls: true
+  - port: 8444
+    name: default
+    protocol: http2 # | spdy | http
+    proxy_protocol: true
+    tls:
+      protocols: TLSv1.3
+      # those two could be the defaults as policies have ssl_certificate phase
+      certificate: /var/run/secret/apicast/certificate.crt
+      certificate_key: /var/run/secret/apicast/certificate.key
+      ciphers: "HIGH:!aNULL:!MD5"
   - port: 9421
     name: prometheus
   tls:
@@ -156,3 +166,4 @@ external: # kind of like egress, but it could also be an internal service
   server: tcp://localhost:6879
   load_balancer: least_conn
   retries: 3
+

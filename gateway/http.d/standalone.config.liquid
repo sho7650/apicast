@@ -1,6 +1,18 @@
 {% for server in standalone.server.listen %}
 server {
-    listen {{ server.port }} default_server;
+    listen {{ server.port }} default_server
+    {%- if server.tls %} ssl {% endif -%}
+    {%- case server.protocol -%}
+    {%- when 'http2' %}{{- server.protocol -}}
+    {%- when 'spdy' %}{{- server.protocol -}}
+    {%- endcase -%}
+    {%- if server.proxy_protocol %} proxy_protocol {% endif -%}
+    ;
+
+    {% if server.tls.protocols -%}
+        ssl_protocols {{ server.tls.protocols | join: " " }};
+    {%- endif %}
+
     {%- capture server_name -%}{{ server.name | default: 'default' }}{%- endcapture %}
     set $port_name {{ server_name }};
     server_name {{ server_name }};
@@ -30,4 +42,18 @@ server {
       log_by_lua_block { require('apicast.executor'):log() }
     }
 }
+{% endfor %}
+
+{% for upstream in standalone.external %}
+upstream {{ upstream.name }} {
+  server 0.0.0.1:1;
+
+  balancer_by_lua_block { require('apicast.executor'):balancer() }
+  {% case upstream.load_balancer %}
+  {% when 'least_conn' %}least_conn;
+  {% endcase %}
+
+  keepalive {{ upstream.keepalive | default: 64 }};
+}
+
 {% endfor %}
