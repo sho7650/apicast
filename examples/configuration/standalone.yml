@@ -87,7 +87,7 @@ routes:
       service: auth-server
 
   - match:
-      server_port: 3scale # could be ommited, default would be the default
+      server_port: default # could be ommited, default would be the default
     destination:
       service: 3scale
 
@@ -132,6 +132,8 @@ internal: # TODO: if we can figure out better name than "service" we would make 
 - name: management
   policy_chain:
   - policy: apicast.policy.management
+    configuration:
+      mode: debug
 
 - name: prometheus
   policy_chain:

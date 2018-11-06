@@ -97,6 +97,7 @@ do
     end,
     uri_path = function(self) return ngx.var.uri == self.value end,
     http_method = function(self) return ngx.req.get_method() == self.value end,
+    http_host = function(self) return ngx.var.host == self.value end,
     always = function(self) return self.value end,
     unknown = function(self) ngx.log(ngx.ERR, 'unknown condition ', self.name); return end
   }
@@ -202,7 +203,8 @@ do
       if policy then
         insert(chain, policy)
       elseif err then
-        ngx.log(ngx.WARN, 'failed to load policy: ', policies[i].policy, ' version: ', policies[i].version, ' err: ', err)
+        ngx.log(ngx.WARN, 'failed to load policy: ', policies[i].policy, ' version: ', policies[i].version)
+        ngx.log(ngx.DEBUG, err)
       end
     end
 

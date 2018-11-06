@@ -48,10 +48,9 @@ server {
 upstream {{ upstream.name }} {
   server 0.0.0.1:1;
 
-  balancer_by_lua_block { require('apicast.executor'):balancer() }
-  {% case upstream.load_balancer %}
-  {% when 'least_conn' %}least_conn;
-  {% endcase %}
+  balancer_by_lua_block {
+    require('apicast.executor'):balancer('{{ upstream.load_balancer }}')
+  }
 
   keepalive {{ upstream.keepalive | default: 64 }};
 }
