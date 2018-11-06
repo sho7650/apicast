@@ -20,13 +20,25 @@ function _M:export()
     }
 end
 
-function _M.init()
-    configuration_loader.init(_M.configuration)
+local once = function(fun)
+    local executed = false
+    return function(...)
+        if not executed then
+            executed = true
+            return fun(...)
+        end
+    end
 end
 
-function _M.init_worker()
+local function init()
+    configuration_loader.init(_M.configuration)
+end
+_M.init = once(init)
+
+local function init_worker()
     configuration_loader.init_worker(_M.configuration)
 end
+_M.init_worker = once(init_worker)
 
 function _M:rewrite(context)
     context.host = context.host or ngx.var.host

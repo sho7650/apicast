@@ -271,10 +271,32 @@ function _M:load_configuration()
   end
 end
 
-function _M:init()
-  if self then -- initializing policy instance
-    return self:load_configuration(self)
+local function run_phase(phase, services, ...)
+  for _, service in ipairs(services) do
+    ngx.log(ngx.DEBUG, 'running phase ', phase, ' on service ', service.name)
+    service.policy_chain[phase](service.policy_chain, ...)
   end
+end
+
+function _M:init(...)
+  if self then -- initializing policy instance
+    local config, err = self:load_configuration(self)
+
+    if config then
+      -- TODO: we need to run this because some policies are "internal" and not being
+      -- found and executed by the apicast.executor :init phase.
+      -- However, this means some policies get .init called twice (or multiple times)
+      -- and need to be changed to initialize only once (like starting timers).
+      run_phase('init', self.services, ...)
+      return config
+    else
+        return nil, err
+    end
+  end
+end
+
+function _M:init_worker(...)
+  run_phase('init_worker', self.services, ...)
 end
 
 local find_route, match_route
