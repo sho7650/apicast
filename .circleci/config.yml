@@ -101,12 +101,12 @@ executors:
     environment:
       S2I_VERSION: "1.1.9a-40ad911d"
       DOCKER_COMPOSE_VERSION: "1.16.1"
-      OPENRESTY_VERSION: "1.13.6.2-1"
+      OPENRESTY_VERSION: "libyaml"
 
   openresty:
     working_directory: /opt/app-root/apicast
     docker:
-    - image: quay.io/3scale/s2i-openresty-centos7:1.13.6.2-1
+    - image: quay.io/3scale/s2i-openresty-centos7:libyaml
     - image: redis:3.2.8-alpine
     environment:
       TEST_NGINX_BINARY: openresty
