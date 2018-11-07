@@ -3,7 +3,7 @@ local resty_url = require('resty.url')
 local format = string.format
 
 local function to_url(uri)
-    local url, err = resty_url.parse(uri)
+    local url = resty_url.parse(uri)
 
     if url then
         return uri

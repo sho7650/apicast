@@ -108,11 +108,11 @@ local function openresty_binary(candidates)
 end
 
 local function to_uri(uri)
-    local url, err = resty_url.parse(uri)
+    local url = resty_url.parse(uri)
 
     if url then
         return uri
-    else
+    elseif uri then
         return format('file:%s', uri)
     end
 end

@@ -37,8 +37,8 @@ do
         ['.yaml'] = YAML.load,
     }
 
-    local function decode(format, contents)
-        local decoder = decoders[format]
+    local function decode(fmt, contents)
+        local decoder = decoders[fmt]
 
         if not decoder then return nil, 'unsupported format' end
         return decoder(contents)
