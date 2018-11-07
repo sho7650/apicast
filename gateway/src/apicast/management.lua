@@ -34,7 +34,7 @@ local function context_configuration()
 end
 
 function _M.status(config)
-  local configuration = config and context_configuration()
+  local configuration = config or context_configuration()
   -- TODO: this should be fixed for multi-tenant deployment
   local has_configuration = configuration.configured
   local has_services = #(configuration:all()) > 0
