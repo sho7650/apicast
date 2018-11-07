@@ -1,9 +1,21 @@
 local PolicyChain = require('apicast.policy_chain')
+local resty_url = require('resty.url')
+local format = string.format
+
+local function to_url(uri)
+    local url, err = resty_url.parse(uri)
+
+    if url then
+        return uri
+    elseif uri then
+        return format('file:%s', uri)
+    end
+end
 
 local standalone = PolicyChain.load_policy(
         'apicast.policy.standalone',
         'builtin',
-        { url = context.configuration })
+        { url = to_url(context.configuration) })
 
 if arg then -- running CLI to generate nginx config
     return {
