@@ -19,7 +19,7 @@ local standalone = PolicyChain.load_policy(
 
 if arg then -- running CLI to generate nginx config
     return {
-        template = 'http.d/standalone.config.liquid',
+        template = 'http.d/standalone.conf.liquid',
         standalone = standalone:load_configuration(),
         configuration = standalone.url,
     }
