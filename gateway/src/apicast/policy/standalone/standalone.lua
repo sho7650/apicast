@@ -315,21 +315,39 @@ match_route = function (route, context)
 end
 
 find_route = function (routes, context)
+  if not routes then return end
+
   for i=1, #routes do
     local route = match_route(routes[i], context)
     if route then return route end
   end
 end
 
-function _M:dispatch(route)
+local function find_service(self, route)
   local destination = route and route.destination
-  local service = self.services[destination and destination.service]
+
+  if self.services and destination then
+    return self.services[destination.service]
+  end
+end
+
+local function not_found(self)
+  return assert(self.services.not_found, 'missing service: not_found').policy_chain
+end
+
+function _M:dispatch(route)
+  if not route then
+    ngx.log(ngx.ERR, 'route not found')
+    return not_found(self)
+  end
+
+  local service = find_service(self, route)
 
   if service then
     return service.policy_chain or empty_chain
   else
     ngx.log(ngx.ERR, 'could not find the route destination')
-    return assert(self.services.not_found, 'missing service: not_found').policy_chain
+    return not_found(self)
   end
 end
 
