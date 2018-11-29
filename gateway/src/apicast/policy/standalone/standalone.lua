@@ -267,6 +267,11 @@ function _M:load_configuration()
     return configuration
   else
     ngx.log(ngx.WARN, 'failed to load ', url, ' err: ', err)
+
+    self.routes = {}
+    self.services = setmetatable({}, { __index = default.services })
+    self.upstreams = {}
+
     return nil, err
   end
 end
