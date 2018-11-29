@@ -13,17 +13,14 @@ __DATA__
       "proxy": {
         "policy_chain": [
           { "name": "apicast.policy.management",
-            "configuration": { } },
-          { "name": "apicast.policy.echo" }
+            "configuration": { } }
         ]
       }
     }
   ]
 }
 --- request
-GET /t
---- response_body
-GET /t HTTP/1.1
+GET /status/info
 --- error_code: 200
 --- no_error_log
 [error]
